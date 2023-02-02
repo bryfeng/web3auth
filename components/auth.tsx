@@ -1,6 +1,8 @@
 import { Web3Auth } from "@web3auth/modal";
 import React, { useEffect,useState } from "react";
 import { CHAIN_NAMESPACES, SafeEventEmitterProvider } from "@web3auth/base";
+import * as jose from "jose"
+
 
 const clientId = "BKaZJjoyi-71czH2j-rGTypUzDRI4ZZQanNuCmwmKK_TDSwSvpLaiMM0OpbjHH-wQgSZAU99liqCBkjXBf6hEQw";
 
@@ -9,6 +11,9 @@ const clientId = "BKaZJjoyi-71czH2j-rGTypUzDRI4ZZQanNuCmwmKK_TDSwSvpLaiMM0OpbjHH
 export default function AuthButton(){
     const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
     const [provider, setProvider] = useState<SafeEventEmitterProvider | null>(null);
+    const [userInfo, setUserInfo] = useState("")
+    const [idToken, setIdToken] = useState("")
+    const [tokenInfo, setTokenInfo] = useState("")
 
     useEffect(() => {
         const init = async () => {
@@ -48,20 +53,67 @@ export default function AuthButton(){
           console.log("web3auth not initialized yet");
           return;
         }
-        console.log(await web3auth.getUserInfo())
+        const info = await web3auth.getUserInfo()
+        setUserInfo(JSON.stringify(info, null, '\t'))
+        console.log("id token: "+info.idToken)
+        setIdToken(JSON.stringify(info.idToken, null, '\t'));
+
       };
+
+    const logout = async () => {
+        await web3auth?.logout()
+        setProvider(null);
+      };
+
+    const logoutButton = (
+        <>
+        <button onClick={logout}>Log Out</button>
+        </>
+    )
+
+    const unwrap = async () => {
+        const res = await fetch("/api/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ idToken }),
+          });
+
+        if (res.ok){
+            const tokenResult = await res.json()
+            setTokenInfo(JSON.stringify(tokenResult, null,'\t'))
+        }
+
+
+    }
+
+    
+
+
 
     
 
     return (
         <>
+        <div> {provider ? logoutButton : <></>}</div>
         <button onClick={login}>
             Log In with Web3Auth
         </button>
         <br/>
+        <br/>
         <button onClick={getUserInfo}>
             getUserInfo
         </button>
+        <pre>{userInfo}</pre>
+        
+        <br/>
+        <br/>
+        <button onClick={unwrap}>
+            unwrap Id token
+        </button>
+        <pre>{tokenInfo}</pre>
+        
         </>
     )
 }
